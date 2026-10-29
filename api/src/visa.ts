@@ -29,7 +29,22 @@ function visaDate(d: Date): string {
   return `${mm}/${dd}/${d.getUTCFullYear()}`;
 }
 
+const RETRY_DELAYS_MS = [1_000, 3_000];
+
+/** Fetch one day's rate, retrying the transient refusals (406s, challenges) Visa sometimes returns. */
 export async function fetchVisaRate(from: string, to: string, date: Date): Promise<VisaRate> {
+  for (let attempt = 0; ; attempt++) {
+    try {
+      return await fetchOnce(from, to, date);
+    } catch (err) {
+      const retryable = !(err instanceof VisaError && err.kind === 'invalid_pair');
+      if (!retryable || attempt >= RETRY_DELAYS_MS.length) throw err;
+      await new Promise((r) => setTimeout(r, RETRY_DELAYS_MS[attempt]));
+    }
+  }
+}
+
+async function fetchOnce(from: string, to: string, date: Date): Promise<VisaRate> {
   const day = visaDate(date);
   const params = new URLSearchParams({
     amount: '1',

@@ -105,7 +105,7 @@ app.post('/pairs', requireAdmin, async (c) => {
     today = await fetchVisaRate(pair.from, pair.to, new Date());
   } catch (err) {
     if (err instanceof VisaError && err.kind === 'invalid_pair') return c.json({ error: err.message }, 422);
-    return c.json({ error: `Could not reach Visa: ${(err as Error).message}` }, 502);
+    return c.json({ error: `Visa is not responding right now (${(err as Error).message}), try again in a minute` }, 502);
   }
 
   const inserted = await c.env.DB.prepare(
